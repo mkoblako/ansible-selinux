@@ -1,0 +1,48 @@
+- name: Install SElinux module
+  hosts: ansible_tests
+  become: yes
+
+  vars:
+   path: /tmp/semodule/
+   packages:
+    - libselinux-python
+    - policycoreutils-python
+    - policycoreutils-devel
+    - selinux-policy
+    - selinux-policy-targeted
+
+  tasks:
+
+   - name: Upgrade all packages to the latest version
+     yum:
+      name: "*"
+      state: latest
+
+   - name: Install SElinux packages
+     yum:
+      pkg: "{{ packages }}"
+
+   - name: Set SELinux to permissive mode
+     selinux:
+       policy: targeted
+       state: permissive
+
+   - name: Copy modules
+     copy:
+       src: "/etc/ansible/selinux/files/selinux/"
+       dest: "{{ path }}"
+#       dest: /tmp/semodule/
+       owner: root
+       group: root
+       mode: 0755
+
+   - name: Install Zabbix agent SELinux module
+     shell: semodule -i "{{ path }}/zabbix_agent.pp"
+
+   - name: Import Zabbix SELinux module settings
+     shell: semanage import -f "{{ path }}/zabbix_se_settings.mod"
+
+   - name: Set SELinux to enforcing mode
+     selinux:
+       policy: targeted
+       state: enforcing
